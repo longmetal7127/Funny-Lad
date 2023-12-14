@@ -39,7 +39,7 @@ public class JoystickDrive extends CommandBase {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    double speed = m_controller.getRightY();
+    double speed = m_controller.getLeftY();
     if (Math.abs(speed) < 0.15 ) {
       speed = 0;
     } else {
@@ -52,7 +52,7 @@ public class JoystickDrive extends CommandBase {
     //1.5
     //.5 
     //counterspeed
-    m_subsystem.drive(-speed*1, -rot *2);
+    m_subsystem.drive(-speed*.85, -rot *2);
 
   }
 
