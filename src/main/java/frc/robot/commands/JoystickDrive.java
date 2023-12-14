@@ -13,6 +13,7 @@ public class JoystickDrive extends CommandBase {
   @SuppressWarnings({ "PMD.UnusedPrivateField", "PMD.SingularField" })
   private final DriveTrain m_subsystem;
   private final CommandXboxController m_controller;
+  private double prevspeed;
 
   /**
    * Creates a new ExampleCommand.
@@ -28,25 +29,30 @@ public class JoystickDrive extends CommandBase {
 
   }
 
+
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
+    prevspeed = 0;
   }
 
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    double speed = m_controller.getLeftY();
-     System.out.println(speed);
+    double speed = m_controller.getRightY();
     if (Math.abs(speed) < 0.15 ) {
       speed = 0;
+    } else {
+      prevspeed = speed;
     }
-    System.out.print(speed);
     double rot = m_controller.getRightX();
     if (Math.abs(rot) < 0.15 ) {
       rot = 0;
     }
-    m_subsystem.drive(-speed*1.5, -rot *.5);
+    //1.5
+    //.5 
+    //counterspeed
+    m_subsystem.drive(-speed*1, -rot *2);
 
   }
 

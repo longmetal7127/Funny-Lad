@@ -19,6 +19,7 @@ import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
 import com.revrobotics.CANEncoder;
 import com.revrobotics.CANPIDController;
 import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.ControlType;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -36,13 +37,12 @@ public class DriveTrain extends SubsystemBase {
   private CANSparkMax m_rightLeader = new CANSparkMax(3, MotorType.kBrushless);
   private CANSparkMax m_rightFollower = new CANSparkMax(4, MotorType.kBrushless);
 
-
   private final Encoder m_leftEncoder = new Encoder(0, 1);
   private final Encoder m_rightEncoder = new Encoder(2, 3);
 
-  private final MotorControllerGroup m_leftGroup =
+  private  MotorControllerGroup m_leftGroup =
       new MotorControllerGroup(m_leftLeader, m_leftFollower);
-  private final MotorControllerGroup m_rightGroup =
+  private  MotorControllerGroup m_rightGroup =
       new MotorControllerGroup(m_rightLeader, m_rightFollower);
 
   private final AnalogGyro m_gyro = new AnalogGyro(0);
@@ -69,6 +69,10 @@ public class DriveTrain extends SubsystemBase {
     // result in both sides moving forward. Depending on how your robot's
     // gearbox is constructed, you might have to invert the left side instead.
     m_rightGroup.setInverted(true);
+    m_leftLeader.setIdleMode(IdleMode.kBrake);
+    m_rightLeader.setIdleMode(IdleMode.kBrake);
+    m_leftFollower.setIdleMode(IdleMode.kBrake);
+    m_rightFollower.setIdleMode(IdleMode.kBrake);
 
     // Set the distance per pulse for the drive encoders. We can simply use the
     // distance traveled for one rotation of the wheel divided by the encoder
@@ -90,8 +94,8 @@ public class DriveTrain extends SubsystemBase {
    * @param speeds The desired wheel speeds.
    */
   public void setSpeeds(DifferentialDriveWheelSpeeds speeds) {
-    final double leftFeedforward = m_feedforward.calculate(speeds.leftMetersPerSecond);
-    final double rightFeedforward = m_feedforward.calculate(speeds.rightMetersPerSecond);
+    final double leftFeedforward = m_feedforward.calculate(speeds.leftMetersPerSecond,1);
+    final double rightFeedforward = m_feedforward.calculate(speeds.rightMetersPerSecond,1);
 
     final double leftOutput =
         m_leftPIDController.calculate(m_leftEncoder.getRate(), speeds.leftMetersPerSecond);
