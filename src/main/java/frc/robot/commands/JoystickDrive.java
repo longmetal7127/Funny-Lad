@@ -5,15 +5,14 @@
 package frc.robot.commands;
 
 import frc.robot.subsystems.DriveTrain;
-import edu.wpi.first.wpilibj2.command.CommandBase;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
 /** An example command that uses an example subsystem. */
-public class JoystickDrive extends CommandBase {
+public class JoystickDrive extends Command {
   @SuppressWarnings({ "PMD.UnusedPrivateField", "PMD.SingularField" })
   private final DriveTrain m_subsystem;
   private final CommandXboxController m_controller;
-  private double prevspeed;
 
   /**
    * Creates a new ExampleCommand.
@@ -29,30 +28,24 @@ public class JoystickDrive extends CommandBase {
 
   }
 
-
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
-    prevspeed = 0;
   }
 
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    double speed = m_controller.getLeftY();
+    double speed = m_controller.getRightX();
     if (Math.abs(speed) < 0.15 ) {
       speed = 0;
-    } else {
-      prevspeed = speed;
     }
-    double rot = m_controller.getRightX();
+    double rot = m_controller.getLeftY();
     if (Math.abs(rot) < 0.15 ) {
       rot = 0;
     }
-    //1.5
-    //.5 
-    //counterspeed
-    m_subsystem.drive(-speed*.85, -rot *2);
+    m_subsystem.drive(-0.5 * speed, -1 * rot);
+    System.out.println(rot);
 
   }
 

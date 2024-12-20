@@ -13,15 +13,16 @@ import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.wpilibj.AnalogGyro;
 import edu.wpi.first.wpilibj.Encoder;
+import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.MotorController;
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
 import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
-import com.revrobotics.CANEncoder;
-import com.revrobotics.CANPIDController;
-import com.revrobotics.CANSparkMax;
-import com.revrobotics.CANSparkMax.IdleMode;
-import com.revrobotics.ControlType;
-import com.revrobotics.CANSparkMaxLowLevel.MotorType;
+import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.SparkBase.PersistMode;
+import com.revrobotics.spark.SparkBase.ResetMode;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.config.SparkMaxConfig;
+
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 /** Represents a differential drive style drivetrain. */
@@ -32,60 +33,41 @@ public class DriveTrain extends SubsystemBase {
   private static final double kTrackWidth = 0.381 * 2; // meters
   private static final double kWheelRadius = 0.0762; // meters
   private static final int kEncoderResolution = 4096;
-  private CANSparkMax m_leftLeader = new CANSparkMax(1, MotorType.kBrushless);
-  private CANSparkMax m_leftFollower = new CANSparkMax(2, MotorType.kBrushless);
-  private CANSparkMax m_rightLeader = new CANSparkMax(3, MotorType.kBrushless);
-  private CANSparkMax m_rightFollower = new CANSparkMax(4, MotorType.kBrushless);
+  private SparkMax m_leftLeader = new SparkMax(1, MotorType.kBrushless);
+  private SparkMax m_leftFollower = new SparkMax(2, MotorType.kBrushless);
+  private SparkMax m_rightLeader = new SparkMax(3, MotorType.kBrushless);
+  private SparkMax m_rightFollower = new SparkMax(4, MotorType.kBrushless);
 
-  private final Encoder m_leftEncoder = new Encoder(0, 1);
-  private final Encoder m_rightEncoder = new Encoder(2, 3);
-
-  private  MotorControllerGroup m_leftGroup =
-      new MotorControllerGroup(m_leftLeader, m_leftFollower);
-  private  MotorControllerGroup m_rightGroup =
-      new MotorControllerGroup(m_rightLeader, m_rightFollower);
-
-  private final AnalogGyro m_gyro = new AnalogGyro(0);
-
-  private final PIDController m_leftPIDController = new PIDController(1, 0, 0);
-  private final PIDController m_rightPIDController = new PIDController(1, 0, 0);
-
-  private final DifferentialDriveKinematics m_kinematics =
-      new DifferentialDriveKinematics(kTrackWidth);
-
-  private final DifferentialDriveOdometry m_odometry;
-
-  // Gains are for example purposes only - must be determined for your own robot!
-  private final SimpleMotorFeedforward m_feedforward = new SimpleMotorFeedforward(1, 3);
+  DifferentialDrive m_robotDrive;
 
   /**
-   * Constructs a differential drive object. Sets the encoder distance per pulse and resets the
+   * Constructs a differential drive object. Sets the encoder distance per pulse
+   * and resets the
    * gyro.
    */
   public DriveTrain() {
-    m_gyro.reset();
+    SparkMaxConfig rightFollowerConfig = new SparkMaxConfig();
+    rightFollowerConfig.inverted(true);
+    rightFollowerConfig.follow(m_rightLeader);
 
-    // We need to invert one side of the drivetrain so that positive voltages
-    // result in both sides moving forward. Depending on how your robot's
-    // gearbox is constructed, you might have to invert the left side instead.
-    m_rightGroup.setInverted(true);
-    m_leftLeader.setIdleMode(IdleMode.kBrake);
-    m_rightLeader.setIdleMode(IdleMode.kBrake);
-    m_leftFollower.setIdleMode(IdleMode.kBrake);
-    m_rightFollower.setIdleMode(IdleMode.kBrake);
+    SparkMaxConfig rightLeaderConfig = new SparkMaxConfig();
+    rightFollowerConfig.inverted(true);
 
-    // Set the distance per pulse for the drive encoders. We can simply use the
-    // distance traveled for one rotation of the wheel divided by the encoder
-    // resolution.
-    m_leftEncoder.setDistancePerPulse(2 * Math.PI * kWheelRadius / kEncoderResolution);
-    m_rightEncoder.setDistancePerPulse(2 * Math.PI * kWheelRadius / kEncoderResolution);
+    m_rightFollower.configure(rightFollowerConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+    m_rightLeader.configure(rightLeaderConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
-    m_leftEncoder.reset();
-    m_rightEncoder.reset();
+    SparkMaxConfig leftFollowerConfig = new SparkMaxConfig();
+    rightFollowerConfig.inverted(false);
+    rightFollowerConfig.follow(m_rightLeader);
 
-    m_odometry =
-        new DifferentialDriveOdometry(
-            m_gyro.getRotation2d(), m_leftEncoder.getDistance(), m_rightEncoder.getDistance());
+    SparkMaxConfig leftLeaderConfig = new SparkMaxConfig();
+    rightFollowerConfig.inverted(false);
+
+    m_leftFollower.configure(leftFollowerConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+    m_leftLeader.configure(leftLeaderConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
+    m_robotDrive = new DifferentialDrive(m_leftLeader::set, m_rightLeader::set);
+
   }
 
   /**
@@ -93,33 +75,18 @@ public class DriveTrain extends SubsystemBase {
    *
    * @param speeds The desired wheel speeds.
    */
-  public void setSpeeds(DifferentialDriveWheelSpeeds speeds) {
-    final double leftFeedforward = m_feedforward.calculate(speeds.leftMetersPerSecond,1);
-    final double rightFeedforward = m_feedforward.calculate(speeds.rightMetersPerSecond,1);
-
-    final double leftOutput =
-        m_leftPIDController.calculate(m_leftEncoder.getRate(), speeds.leftMetersPerSecond);
-    final double rightOutput =
-        m_rightPIDController.calculate(m_rightEncoder.getRate(), speeds.rightMetersPerSecond);
-    m_leftGroup.setVoltage(leftOutput + leftFeedforward);
-    m_rightGroup.setVoltage(rightOutput + rightFeedforward);
-  }
 
   /**
    * Drives the robot with the given linear velocity and angular velocity.
    *
    * @param xSpeed Linear velocity in m/s.
-   * @param rot Angular velocity in rad/s.
+   * @param rot    Angular velocity in rad/s.
    */
-  public void drive(double xSpeed, double rot) {
-    var wheelSpeeds = m_kinematics.toWheelSpeeds(new ChassisSpeeds(xSpeed, 0.0, rot));
-    setSpeeds(wheelSpeeds);
+  public void drive(double x, double y) {
+    m_robotDrive.arcadeDrive(x* -1, y);
   }
-
 
   /** Updates the field-relative position. */
   public void updateOdometry() {
-    m_odometry.update(
-        m_gyro.getRotation2d(), m_leftEncoder.getDistance(), m_rightEncoder.getDistance());
   }
 }
